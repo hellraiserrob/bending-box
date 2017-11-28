@@ -134,7 +134,7 @@ class App extends Component {
         let diff = this.lastPos - this.end
 
         let p = this.counter / (Math.abs(diff) + this.counter)
-        let change = easing.easeInCubic(p) * 100
+        let change = easing.linear(p) * 100
 
         // console.log(`percent: ${p}, diff: ${diff}, change: ${change}`)
 
