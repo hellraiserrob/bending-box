@@ -3,55 +3,8 @@ import './App.css';
 
 import Paper, { Point, Path, Rectangle, Tool } from 'paper'
 
-
-/*
- * Easing Functions - inspired from http://gizma.com/easing/
- * only considering the t value for the range [0, 1] => [0, 1]
- */
-const easing = {
-    // no easing, no acceleration
-    linear: function (t) { return t },
-    // accelerating from zero velocity
-    easeInQuad: function (t) { return t * t },
-    // decelerating to zero velocity
-    easeOutQuad: function (t) { return t * (2 - t) },
-    // acceleration until halfway, then deceleration
-    easeInOutQuad: function (t) { return t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t },
-    // accelerating from zero velocity 
-    easeInCubic: function (t) { return t * t * t },
-    // decelerating to zero velocity 
-    easeOutCubic: function (t) { return (--t) * t * t + 1 },
-    // acceleration until halfway, then deceleration 
-    easeInOutCubic: function (t) { return t < .5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1 },
-    // accelerating from zero velocity 
-    easeInQuart: function (t) { return t * t * t * t },
-    // decelerating to zero velocity 
-    easeOutQuart: function (t) { return 1 - (--t) * t * t * t },
-    // acceleration until halfway, then deceleration
-    easeInOutQuart: function (t) { return t < .5 ? 8 * t * t * t * t : 1 - 8 * (--t) * t * t * t },
-    // accelerating from zero velocity
-    easeInQuint: function (t) { return t * t * t * t * t },
-    // decelerating to zero velocity
-    easeOutQuint: function (t) { return 1 + (--t) * t * t * t * t },
-    // acceleration until halfway, then deceleration 
-    easeInOutQuint: function (t) { return t < .5 ? 16 * t * t * t * t * t : 1 + 16 * (--t) * t * t * t * t }
-}
-
-
-const debounce = (func, wait, immediate) => {
-	var timeout;
-	return function() {
-		var context = this, args = arguments;
-		var later = function() {
-			timeout = null;
-			if (!immediate) func.apply(context, args);
-		};
-		var callNow = immediate && !timeout;
-		clearTimeout(timeout);
-		timeout = setTimeout(later, wait);
-		if (callNow) func.apply(context, args);
-	};
-};
+import Easing from './Easing'
+import Debounce from './Debounce'
 
 
 class App extends Component {
@@ -68,8 +21,14 @@ class App extends Component {
 
 
         this.paper = Paper.setup(this.canvas)
+        
+
+        
+        // main path
         this.path = new Path()
         this.path.fillColor = '#eee'
+
+
 
         this.center = this.path.view.center
         this.width = this.path.view.size.width
@@ -82,40 +41,87 @@ class App extends Component {
         this.start = this.center.y
         this.end = this.center.y
         this.counter = 0
+
+
         
 
         // add a rectangle
-        this.rect = new Rectangle(0, 0, this.width, this.height * .5)
-        this.pathRect = new Path.Rectangle(this.rect)
-        this.pathRect.fillColor = '#eee'
+        // this.rect = new Rectangle(0, 0, this.width, this.height * .5)
+        // this.pathRect = new Path.Rectangle(this.rect)
+        // this.pathRect.fillColor = '#eee'
 
 
         this.path.segments = [];
 
 
         // this.path.add(this.paper.view.bounds.bottomLeft);
+        this.path.add(0, 0);
+        this.path.add(this.width, 0);
+        this.path.add(this.width, this.center.y);
+        this.path.add(this.width - 20, this.center.y);
+        
+        
+        this.path.add(this.width / 2, this.center.y);
+
+        this.path.add(20, this.center.y);
         this.path.add(0, this.center.y);
 
-        for (var i = 1; i < this.points; i++) {
-            var point = new Point((this.width) / this.points * i, this.center.y);
-            this.path.add(point);
-        }
+        
+
+        // for (var i = 1; i < this.points; i++) {
+        //     var point = new Point((this.width) / this.points * i, this.center.y);
+        //     this.path.add(point);
+        // }
+
+        
+
+
 
         // this.path.add(this.paper.view.bounds.bottomRight);
-        this.path.add(this.width, this.center.y);
 
 
-        // this.path.fullySelected = true;
-        this.path.smooth({ type: 'continuous' });
+
+        this.path.fullySelected = true;
+
+        this.path.smooth({ type: 'continuous', from: 3, to: 5 })
+
+
+        this.path.closed = true
+
+
+
+
+        
+        // hit boundaries
+
+        const strokeColor = '#999'
+        const strokeDash = [10, 10]
+
+        this.boundaryTop = new Path()
+        this.boundaryTop.strokeColor = strokeColor
+        this.boundaryTop.dashArray = strokeDash 
+
+        this.boundaryTop.add(0, this.height * 0.25);
+        this.boundaryTop.add(this.width, this.height * 0.25);
+
+        this.boundaryBottom = new Path()
+        this.boundaryBottom.strokeColor = strokeColor
+        this.boundaryBottom.dashArray = strokeDash
+
+        this.boundaryBottom.add(0, this.height * 0.75);
+        this.boundaryBottom.add(this.width, this.height * 0.75);
+        
+
 
         this.tool = new Tool()
 
         
 
-        var myEfficientFn = debounce((e) => {
+        var myEfficientFn = Debounce((e) => {
              this.onMouseMove(e)
-        }, 250);
+        }, 100);
 
+        // this.tool.onMouseMove = myEfficientFn
         this.tool.onMouseMove = myEfficientFn
 
 
@@ -134,7 +140,7 @@ class App extends Component {
         let diff = this.lastPos - this.end
 
         let p = this.counter / (Math.abs(diff) + this.counter)
-        let change = easing.linear(p) * 100
+        let change = Easing.easeOutQuad(p) * 150
 
         // console.log(`percent: ${p}, diff: ${diff}, change: ${change}`)
 
@@ -158,13 +164,14 @@ class App extends Component {
             // console.log(`${change}`)
             // console.log(`${this.counter} / ${d}`)
 
-            this.path.segments[1].point.y = newY
+            this.path.segments[4].point.y = newY
             this.lastPos = newY
 
 
         }
         else {
-            this.path.segments[1].point.y = this.end
+            this.path.segments[4].point.y = this.end
+            this.lastPos = this.end
         }
 
 
