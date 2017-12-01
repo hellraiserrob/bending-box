@@ -34,9 +34,13 @@ const Easing = {
 
     easeInElastic: function (t) { return (.04 - .04 / t) * Math.sin(25 * t) + 1 },
     // elastic bounce effect at the end
-    easeOutElastic: function (t) { return .04 * t / (--t) * Math.sin(25 * t) },
-    // elastic bounce effect at the beginning and end
-    easeInOutElastic: function (t) { return (t -= .5) < 0 ? (.02 + .01 / t) * Math.sin(50 * t) : (.02 - .01 / t) * Math.sin(50 * t) + 1 }
+    // easeOutElastic: function (t) { return .04 * t / (--t) * Math.sin(25 * t) },
+
+    easeOutElastic: function (t) {
+        var p = 0.3;
+        return Math.pow(2, -10 * t) * Math.sin((t - p / 4) * (2 * Math.PI) / p) + 1;
+    }
+
 }
 
 export default Easing
